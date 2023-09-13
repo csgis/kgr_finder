@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/find_osm_data" >
+        <file>firicon.png</file>
+    </qresource>
+</RCC>
