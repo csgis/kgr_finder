@@ -21,7 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QVariant
+from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QIcon, QColor
 
 from qgis.PyQt.QtWidgets import QAction, QVBoxLayout
@@ -30,19 +30,16 @@ from qgis.gui import QgsMapTool, QgsRubberBand
 from .resources import *
 
 # Import the code for the DockWidget
-from .find_osm_data_dockwidget import FindOSMDataDockWidget
-import os.path
 from qgis.core import QgsSettings, QgsWkbTypes, QgsGeometry, QgsRectangle, QgsVectorLayer, QgsField, QgsProject, QgsPointXY, QgsFeature, QgsFields
-from qgis.PyQt.QtWidgets import QHBoxLayout
 from qgis.gui import QgsOptionsWidgetFactory, QgsOptionsPageWidget
 from qgis.utils import iface
-from qgis.PyQt.QtWidgets import QFormLayout, QCheckBox, QLabel
+from qgis.PyQt.QtWidgets import QFormLayout, QCheckBox
 import json
 from qgis.gui import QgsCollapsibleGroupBox
-from qgis.core import QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory
+from qgis.core import QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory, QgsFillSymbol, QgsLineSymbol
 from .data_apis import OverpassAPIQueryStrategy, iDAIGazetteerAPIQueryStrategy
+from qgis.core import Qgis
 
-import requests
 
 class FindOSMDataOptionsFactory(QgsOptionsWidgetFactory):
 
@@ -62,7 +59,7 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
         "place_of_worship",
         "Historic",
         "Museum",
-        "Memorial",
+        "memorial",
         "Artwork",
         "Castle",
         "Ruins",
@@ -70,10 +67,12 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
         "Monastery",
         "Cultural Centre",
         "Library",
-        "heritage"
+        "heritage",
+        "name=Universität Leipzig",
+        "name=Windmühlenstraße"
     ]
 
-    additional_tags = [
+    settings_tags = [
         "OSM abfragen",
         "iDAI abfragen"
     ]
@@ -83,8 +82,8 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
         layout = QFormLayout()
         self.setLayout(layout)
 
-        self.section_checkboxes = {}  # Initialize as a class variable
-        self.createCheckBoxes(layout, "Settings", self.additional_tags, "additional_tags")
+        self.section_checkboxes = {} 
+        self.createCheckBoxes(layout, "Settings", self.settings_tags, "settings_tags")
         self.createCheckBoxes(layout, "OSM – Cultural Tags", self.osm_tags, "osm_tags")
 
         self.loadAndSetCheckboxes()
@@ -145,9 +144,7 @@ class FindOSMData:
         self.action = QAction(QIcon(":/plugins/find_osm_data/firicon.png"),
                             "KGR Finder2",
                             self.iface.mainWindow())
-        
-
-        
+             
         self.action.setObjectName("testAction")
         self.action.setWhatsThis("Configuration for KGR Finder")
         self.action.setStatusTip("This is status tip")
@@ -169,10 +166,9 @@ class FindOSMData:
         self.iface.removeToolBarIcon(self.action)
         iface.unregisterOptionsWidgetFactory(self.options_factory)
 
-
     def toggleTool(self, checked):
         if checked:
-            self.tool = FindOSMDataTool(self.iface.mapCanvas())
+            self.tool = FindKGRData(self.iface.mapCanvas())
             self.iface.mapCanvas().setMapTool(self.tool)
         else:
             self.iface.mapCanvas().unsetMapTool(self.tool)
@@ -183,7 +179,8 @@ class FindOSMData:
         print("TestPlugin: run called!")
 
 
-class FindOSMDataTool(QgsMapTool):
+
+class FindKGRData(QgsMapTool):
     def __init__(self, canvas):
         QgsMapTool.__init__(self, canvas)
         self.canvas = canvas
@@ -191,7 +188,17 @@ class FindOSMDataTool(QgsMapTool):
         self.rubber_band.setStrokeColor(QColor('red'))
         self.rubber_band.setWidth(1)
         self.is_drawing = False
-        self.api_strategies = [OverpassAPIQueryStrategy(), iDAIGazetteerAPIQueryStrategy()]  # Add any additional strategies
+
+        selected_settings_tags = QgsSettings().value("/FindOSMData/settings_tags", [])
+        self.api_strategies = []
+        print(selected_settings_tags)
+        if "OSM abfragen" in selected_settings_tags:
+            self.api_strategies.append(OverpassAPIQueryStrategy()) 
+        if "iDAI abfragen" in selected_settings_tags:
+            self.api_strategies.append(iDAIGazetteerAPIQueryStrategy()) 
+        print(self.api_strategies)
+
+        # self.api_strategies = [OverpassAPIQueryStrategy(), iDAIGazetteerAPIQueryStrategy()]  # Add any additional strategies
         # self.api_strategies = [iDAIGazetteerAPIQueryStrategy()]  # Add any additional strategies
 
         # self.api_strategies = [OverpassAPIQueryStrategy()]  # Add any additional strategies
@@ -221,39 +228,72 @@ class FindOSMDataTool(QgsMapTool):
     def showRectangleCoordinates(self):
         rect = self.rubber_band.asGeometry().boundingBox().toRectF()
         x_min, y_min, x_max, y_max = rect.getCoords()
+        
         point_layer = self.createPointLayer()
         fields = point_layer.fields()
 
+        polygon_layer = self.createPolygonLayer()
+
+        root = QgsProject.instance().layerTreeRoot()
+        group = root.insertGroup(0, "KGR")
+        group.addLayer(point_layer)
+        group.addLayer(polygon_layer)
+
+        categorized_renderer_point = self.createCategorizedRendererPoints(point_layer)
+        point_layer.setRenderer(categorized_renderer_point)
+
+        categorized_renderer_polygon = self.createCategorizedRendererPolygons(polygon_layer)
+        polygon_layer.setRenderer(categorized_renderer_polygon)
+
+        QgsProject.instance().addMapLayer(polygon_layer, False)
+        QgsProject.instance().addMapLayer(point_layer, False)
+
         for strategy in self.api_strategies:
-            print(strategy)
+
             data = strategy.query(x_min, y_min, x_max, y_max)
             elements = strategy.extractElements(data)
             attribute_mappings = strategy.getAttributeMappings()
-            
+            data = strategy.query(x_min, y_min, x_max, y_max)
+
             for element in elements:
                 feature = self.createFeature(element, fields, attribute_mappings, strategy)
 
-                if feature is not None:
-                    point_layer.dataProvider().addFeature(feature)
+                geometry_type = strategy.getGeometryType(element)
+                if geometry_type == 'point':
+                    if feature is not None:
+                        point_layer.dataProvider().addFeature(feature)
+                elif geometry_type == 'polygon':
+                    if feature is not None:
+                        polygon_layer.dataProvider().addFeature(feature)        
 
-            categorized_renderer = self.createCategorizedRenderer(point_layer)
 
-            point_layer.setRenderer(categorized_renderer)
-            point_layer.triggerRepaint()
+        # point_layer.triggerRepaint()
+        # polygon_layer.triggerRepaint()
 
-            QgsProject.instance().addMapLayer(point_layer)
+
+        iface.messageBar().pushMessage("KGR", "Data from "+strategy.source+" loaded", level=Qgis.Success, duration=9)
 
 
 
     def createFeature(self, element, fields, attribute_mappings, strategy):
-        lat, lon = strategy.extractLatLon(element)
         geometry_type = strategy.getGeometryType(element)
+        tags = element.get("tags")
 
-        print(lat,lon)
-        if geometry_type == 'point' and lat is not None and lon is not None:
-            point = QgsPointXY(lon, lat)
-            geometry = QgsGeometry.fromPointXY(point)
+        if geometry_type == 'point':
+            lat, lon = strategy.extractLatLon(element)
+            if lat is not None and lon is not None:
+                point = QgsPointXY(lon, lat)
+                geometry = QgsGeometry.fromPointXY(point)
+        elif geometry_type == 'polygon':
+            polygonNodes = strategy.extractPolygonNodes(element)
+            print(polygonNodes)
+            if polygonNodes:
+                polygon = QgsGeometry.fromPolygonXY([polygonNodes])
+                geometry = polygon
+            else:
+                return None  # Not enough nodes to form a polygon
         else:
+            pass
             # Handle other element types or missing lat/lon
             # print(element)
             # print("no lon lat")
@@ -285,13 +325,11 @@ class FindOSMDataTool(QgsMapTool):
 
         return feature
 
-
-    def createPointLayer(self):
+    def createFields(self):
         fields = QgsFields()
+
         fields.append(QgsField('lon', QVariant.String))
-
         fields.append(QgsField('lat', QVariant.String))
-
         fields.append(QgsField('name', QVariant.String))
         fields.append(QgsField('source', QVariant.String))
         fields.append(QgsField('description', QVariant.String, 'string', 5000))
@@ -300,15 +338,30 @@ class FindOSMDataTool(QgsMapTool):
         fields.append(QgsField('tags', QVariant.String, 'json', 5000))
         fields.append(QgsField('building', QVariant.String))
 
+        return fields
+
+    def createPointLayer(self):
+        fields = self.createFields()
         # Get the current project's CRS
         project_crs = QgsProject.instance().crs()
-        point_layer = QgsVectorLayer(f'Point?crs={project_crs.authid()}', 'OSM Data (Points)', 'memory')
+        point_layer = QgsVectorLayer(f'Point?crs={project_crs.authid()}', 'KGR (Points)', 'memory')
         point_layer.dataProvider().addAttributes(fields)
         point_layer.updateFields()
 
         return point_layer
 
-    def createCategorizedRenderer(self, layer):
+    def createPolygonLayer(self):
+        fields = self.createFields()
+
+        # Get the current project's CRS
+        project_crs = QgsProject.instance().crs()
+        polygon_layer = QgsVectorLayer(f'Polygon?crs={project_crs.authid()}', 'KGR (Polygons)', 'memory')
+        polygon_layer.dataProvider().addAttributes(fields)
+        polygon_layer.updateFields()
+
+        return polygon_layer
+
+    def createCategorizedRendererPoints(self, layer):
         categorized_renderer = QgsCategorizedSymbolRenderer('source')
 
         osm_symbol = QgsMarkerSymbol.defaultSymbol(layer.geometryType())
@@ -327,6 +380,30 @@ class FindOSMDataTool(QgsMapTool):
 
         return categorized_renderer
 
+    def createCategorizedRendererPolygons(self, layer):
+        categorized_renderer = QgsCategorizedSymbolRenderer('source')
+
+        osm_symbol = QgsFillSymbol.createSimple({
+            'color': '255,255,0,255',  # Yellow color with alpha
+            'outline_style': 'solid',
+            'outline_color': '0,0,0,255',  # Black color with alpha
+            'outline_width': '0.5',  # Outline width
+        })
+
+        non_osm_symbol = QgsFillSymbol.createSimple({
+            'color': '0,255,0,255',  # Green color with alpha
+            'outline_style': 'solid',
+            'outline_color': '0,0,0,255',  # Black color with alpha
+            'outline_width': '0.5',  # Outline width
+        })
+
+        cat_osm = QgsRendererCategory('osm', osm_symbol, 'OSM Features')
+        cat_non_osm = QgsRendererCategory('DAI', non_osm_symbol, 'DAI')
+
+        categorized_renderer.addCategory(cat_osm)
+        categorized_renderer.addCategory(cat_non_osm)
+
+        return categorized_renderer
 
     def deactivate(self):
         self.rubber_band.reset()
