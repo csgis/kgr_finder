@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/plugins/find_osm_data" >
-        <file>firicon.png</file>
+    <qresource prefix="/plugins/kgr_finder" >
+        <file>greif.png</file>
     </qresource>
 </RCC>

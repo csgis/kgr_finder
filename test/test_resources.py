@@ -18,7 +18,7 @@ from qgis.PyQt.QtGui import QIcon
 
 
 
-class FindOSMDataDialogTest(unittest.TestCase):
+class KgrFinderDialogTest(unittest.TestCase):
     """Test rerources work."""
 
     def setUp(self):
@@ -31,12 +31,12 @@ class FindOSMDataDialogTest(unittest.TestCase):
 
     def test_icon_png(self):
         """Test we can click OK."""
-        path = ':/plugins/FindOSMData/icon.png'
+        path = ':/plugins/KgrFinder/icon.png'
         icon = QIcon(path)
         self.assertFalse(icon.isNull())
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(FindOSMDataResourcesTest)
+    suite = unittest.makeSuite(KgrFinderResourcesTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
 

@@ -46,10 +46,10 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
             self.checkboxes.append((tag, checkbox))
 
         # Load selected tags from settings and set checkboxes
-        selected_tags = QgsSettings().value("/FindOSMData/cultural_tags", []) 
+        selected_tags = QgsSettings().value("/KgrFinder/cultural_tags", []) 
         for tag, checkbox in self.checkboxes:
             checkbox.setChecked(tag in selected_tags)
 
     def checkboxStateChanged(self):
         selected_tags = [tag for tag, checkbox in self.checkboxes if checkbox.isChecked()]
-        QgsSettings().setValue("/FindOSMData/cultural_tags", selected_tags)  # Save selected tags to settings
+        QgsSettings().setValue("/KgrFinder/cultural_tags", selected_tags)  # Save selected tags to settings

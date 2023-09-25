@@ -101,7 +101,7 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
         x_min, y_min = self.transformTo4326(x_min, y_min)
         x_max, y_max = self.transformTo4326(x_max, y_max)
 
-        selected_cultural_tags = QgsSettings().value("/FindOSMData/osm_tags", [])
+        selected_cultural_tags = QgsSettings().value("/KgrFinder/osm_tags", [])
         overpass_query = self.createOverpassQuery(selected_cultural_tags, x_min, y_min, x_max, y_max)
 
         try:

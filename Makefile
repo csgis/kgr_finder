@@ -1,7 +1,7 @@
 #/***************************************************************************
-# FindOSMData
+# KgrFinder
 #
-# Find OSM Data
+#Find KGR Data
 #							 -------------------
 #		begin				: 2023-09-11
 #		git sha				: $Format:%H$
@@ -38,15 +38,15 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	find_osm_data.py find_osm_data_dockwidget.py
+	kgr_finder.py kgr_finder_dockwidget.py
 
-PLUGINNAME = find_osm_data
+PLUGINNAME = kgr_finder
 
 PY_FILES = \
 	__init__.py \
-	find_osm_data.py find_osm_data_dockwidget.py
+	kgr_finder.py kgr_finder_dockwidget.py
 
-UI_FILES = find_osm_data_dockwidget_base.ui
+UI_FILES = kgr_finder_dockwidget_base.ui
 
 EXTRAS = metadata.txt icon.png
 

@@ -16,19 +16,19 @@ import unittest
 
 from qgis.PyQt.QtGui import QDockWidget
 
-from find_osm_data_dockwidget import FindOSMDataDockWidget
+from kgr_finder_dockwidget import KgrFinderDockWidget
 
 from utilities import get_qgis_app
 
 QGIS_APP = get_qgis_app()
 
 
-class FindOSMDataDockWidgetTest(unittest.TestCase):
+class KgrFinderDockWidgetTest(unittest.TestCase):
     """Test dockwidget works."""
 
     def setUp(self):
         """Runs before each test."""
-        self.dockwidget = FindOSMDataDockWidget(None)
+        self.dockwidget = KgrFinderDockWidget(None)
 
     def tearDown(self):
         """Runs after each test."""
@@ -39,7 +39,7 @@ class FindOSMDataDockWidgetTest(unittest.TestCase):
         pass
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(FindOSMDataDialogTest)
+    suite = unittest.makeSuite(KgrFinderDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
 

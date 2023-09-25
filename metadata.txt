@@ -3,9 +3,9 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=Find OSM Data
+name=KGR Finder
 qgisMinimumVersion=3.0
-description=Find OSM Data
+description=Find cultural heritage from different sources like OSM, iDAI etc.
 version=0.1
 author=cuprit gbr
 email=toni.schoenbuchner@cuprit.net
@@ -27,7 +27,7 @@ tags=python
 
 homepage=http://homepage
 category=Plugins
-icon=firicon.png
+icon=greif.png
 # experimental flag
 experimental=True
 
