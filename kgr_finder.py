@@ -73,8 +73,8 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
     ]
 
     initially_checked = {
-        "osm_tags" : ["place_of_worship"],
-        "settings_tags" : ["iDAI abfragen"]
+        "osm_tags" : ["heritage"],
+        "settings_tags" : ["iDAI abfragen", "OSM abfragen"]
     }
 
     def __init__(self, parent):
@@ -90,14 +90,19 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
         self.section_checkboxes = {} 
         self.createCheckBoxes(layout, "Settings", self.settings_tags, "settings_tags")
         self.createCheckBoxes(layout, "OSM – Cultural Tags", self.osm_tags, "osm_tags")
-
+        self.applyInitialSettings()
         self.loadAndSetCheckboxes()
+
+    def applyInitialSettings(self):
+        for key in self.initially_checked.keys():
+            current_value = QgsSettings().value(f"/KgrFinder/{key}", [])
+            if not current_value and not self.anyCheckboxChecked(key):
+                QgsSettings().setValue(f"/KgrFinder/{key}", self.initially_checked[key])
+
 
     def anyCheckboxChecked(self, settings_key):
         osm_tags = QgsSettings().value(f"/KgrFinder/{settings_key}", [])
         return any(tag in osm_tags for tag in self.initially_checked[settings_key])
-
-
 
     def createCheckBoxes(self, layout, group_title, tags, settings_key):
         group_box = QgsCollapsibleGroupBox(group_title)
@@ -120,25 +125,25 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
         self.section_checkboxes[settings_key] = checkboxes
 
         # Load selected tags from settings and set checkboxes
-        osm_tags = QgsSettings().value(f"/KgrFinder/{settings_key}", []) 
+        kgr_tags = QgsSettings().value(f"/KgrFinder/{settings_key}", []) 
         for tag, checkbox in checkboxes:
-            checkbox.setChecked(tag in osm_tags)
+            checkbox.setChecked(tag in kgr_tags)
 
     def apply(self):
         for settings_key, checkboxes in self.section_checkboxes.items():
-            osm_tags = [tag for tag, checkbox in checkboxes if checkbox.isChecked()]
-            QgsSettings().setValue(f"/KgrFinder/{settings_key}", osm_tags) 
+            kgr_tags = [tag for tag, checkbox in checkboxes if checkbox.isChecked()]
+            QgsSettings().setValue(f"/KgrFinder/{settings_key}", kgr_tags) 
 
     def loadAndSetCheckboxes(self):
         for settings_key, checkboxes in self.section_checkboxes.items():
-            osm_tags = QgsSettings().value(f"/KgrFinder/{settings_key}", [])
+            kgr_tags = QgsSettings().value(f"/KgrFinder/{settings_key}", [])
             for tag, checkbox in checkboxes:
-                checkbox.setChecked(tag in osm_tags)
+                checkbox.setChecked(tag in kgr_tags)
         
     def checkboxStateChanged(self):
         for settings_key, checkboxes in self.section_checkboxes.items():
-            osm_tags = [tag for tag, checkbox in checkboxes if checkbox.isChecked()]
-            QgsSettings().setValue(f"/KgrFinder/{settings_key}", osm_tags)
+            kgr_tags = [tag for tag, checkbox in checkboxes if checkbox.isChecked()]
+            QgsSettings().setValue(f"/KgrFinder/{settings_key}", kgr_tags)
 
 
 
@@ -152,6 +157,8 @@ class KgrFinder:
         self.tool = None
 
     def initGui(self):
+        config_options_page = ConfigOptionsPage(None)
+
         # create action that will start plugin configuration
         self.action = QAction(QIcon(":/plugins/kgr_finder/greif.png"),
                             "KGR Finder",
@@ -191,7 +198,7 @@ class KgrFinder:
         # create and show a configuration dialog or something similar
         print("TestPlugin: run called!")
 
-#now
+from PyQt5.QtCore import Qt
 
 class FindKGRData(QgsMapTool):
     def __init__(self, canvas):
@@ -201,6 +208,7 @@ class FindKGRData(QgsMapTool):
         self.rubber_band.setStrokeColor(QColor('red'))
         self.rubber_band.setWidth(1)
         self.is_drawing = False
+        self.polygon_points = []
 
         selected_settings_tags = QgsSettings().value("/KgrFinder/settings_tags", [])
         self.api_strategies = []
@@ -210,30 +218,36 @@ class FindKGRData(QgsMapTool):
             self.api_strategies.append(iDAIGazetteerAPIQueryStrategy()) 
 
     def canvasPressEvent(self, event):
-        if not self.is_drawing:
-            self.is_drawing = True
-            self.start_point = self.toMapCoordinates(event.pos())
-            self.rubber_band.setToGeometry(QgsGeometry.fromRect(QgsRectangle(self.start_point, self.start_point)), None)
-            self.rubber_band.show()
-
-    def canvasMoveEvent(self, event):
         if self.is_drawing:
-            self.end_point = self.toMapCoordinates(event.pos())
-            self.rubber_band.setToGeometry(QgsGeometry.fromRect(QgsRectangle(self.start_point, self.end_point)), None)
+            self.polygon_points.append(self.toMapCoordinates(event.pos()))
+            self.updateRubberBand()
+        else:
+            self.is_drawing = True
+            self.polygon_points = [self.toMapCoordinates(event.pos())]
+            self.updateRubberBand()
             self.rubber_band.show()
 
     def canvasReleaseEvent(self, event):
         if self.is_drawing:
-            self.is_drawing = False
-            self.end_point = self.toMapCoordinates(event.pos())
-            self.rubber_band.setToGeometry(QgsGeometry.fromRect(QgsRectangle(self.start_point, self.end_point)), None)
-            self.rubber_band.show()
-            self.showRectangleCoordinates()
+            if event.button() == Qt.RightButton:
+                self.is_drawing = False
+                #self.rubber_band.reset()
+                #self.rubber_band.hide()
+                self.showPolygonCoordinates()
 
-    def showRectangleCoordinates(self):
-        rect = self.rubber_band.asGeometry().boundingBox().toRectF()
-        x_min, y_min, x_max, y_max = rect.getCoords()
-        
+    def updateRubberBand(self):
+        self.rubber_band.setToGeometry(QgsGeometry.fromPolygonXY([self.polygon_points]), None)
+        self.rubber_band.show()
+
+    def showPolygonCoordinates(self):
+        drawn_polygon = QgsGeometry.fromPolygonXY([self.polygon_points])
+        rect = drawn_polygon.boundingBox()
+
+        drawn_x_min = rect.xMinimum()
+        drawn_y_min = rect.yMinimum()
+        drawn_x_max = rect.xMaximum()
+        drawn_y_max = rect.yMaximum()
+
         point_layer = self.createLayer('Point')
         fields = point_layer.fields()
 
@@ -254,24 +268,25 @@ class FindKGRData(QgsMapTool):
         QgsProject.instance().addMapLayer(point_layer, False)
 
         for strategy in self.api_strategies:
-
-            data = strategy.query(x_min, y_min, x_max, y_max)
+            data = strategy.query(drawn_x_min, drawn_y_min, drawn_x_max, drawn_y_max)
             elements = strategy.extractElements(data)
             attribute_mappings = strategy.getAttributeMappings()
-            data = strategy.query(x_min, y_min, x_max, y_max)
 
             for element in elements:
                 feature = self.createFeature(element, fields, attribute_mappings, strategy)
 
-                geometry_type = strategy.getGeometryType(element)
-                if geometry_type == 'point':
-                    if feature is not None:
-                        point_layer.dataProvider().addFeature(feature)
-                elif geometry_type == 'polygon':
-                    if feature is not None:
-                        polygon_layer.dataProvider().addFeature(feature)        
+                if feature is not None:
+                    geometry_type = strategy.getGeometryType(element)
+                    if geometry_type == 'point':
+                        if feature.geometry().within(drawn_polygon):
+                            point_layer.dataProvider().addFeature(feature)
+                    elif geometry_type == 'polygon':
+                        if feature.geometry().intersects(drawn_polygon):
+                            polygon_layer.dataProvider().addFeature(feature)
 
-            iface.messageBar().pushMessage("KGR", "Data from "+strategy.source+" loaded", level=Qgis.Success, duration=9)
+            iface.messageBar().pushMessage("KGR", "Data from " + strategy.source + " loaded", level=Qgis.Success, duration=3)
+
+
 
 
 
