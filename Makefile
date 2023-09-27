@@ -38,15 +38,13 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	kgr_finder.py kgr_finder_dockwidget.py
+	kgr_finder.py
 
 PLUGINNAME = kgr_finder
 
 PY_FILES = \
 	__init__.py \
-	kgr_finder.py kgr_finder_dockwidget.py
-
-UI_FILES = kgr_finder_dockwidget_base.ui
+	kgr_finder.py
 
 EXTRAS = metadata.txt icon.png
 

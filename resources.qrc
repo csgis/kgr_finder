@@ -2,4 +2,10 @@
     <qresource prefix="/plugins/kgr_finder" >
         <file>greif.png</file>
     </qresource>
+    <qresource prefix="/plugins/kgr_finder" >
+        <file>greif_rectangle.png</file>
+    </qresource>
+    <qresource prefix="/plugins/kgr_finder" >
+        <file>greif_polygon.png</file>
+    </qresource>
 </RCC>

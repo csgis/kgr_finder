@@ -21,28 +21,22 @@ Find KGR Data
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QVariant
-from qgis.PyQt.QtGui import QIcon, QColor
+from qgis.PyQt.QtGui import QIcon
 
 from qgis.PyQt.QtWidgets import QAction, QVBoxLayout
-from qgis.gui import QgsMapTool, QgsRubberBand
 # Initialize Qt resources from file resources.py
 from .resources import *
 
-# Import the code for the DockWidget
-from .kgr_finder_dockwidget import KgrFinderDockWidget
 import os.path
-from qgis.core import QgsSettings, QgsWkbTypes, QgsGeometry, QgsRectangle, QgsVectorLayer, QgsField, QgsProject, QgsPointXY, QgsFeature, QgsFields
-from qgis.PyQt.QtWidgets import QHBoxLayout
+from qgis.core import QgsSettings
 from qgis.gui import QgsOptionsWidgetFactory, QgsOptionsPageWidget
 from qgis.utils import iface
-from qgis.PyQt.QtWidgets import QFormLayout, QCheckBox, QLabel
+from qgis.PyQt.QtWidgets import QFormLayout, QCheckBox
 import json
 from qgis.gui import QgsCollapsibleGroupBox
-from qgis.core import QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory
-from .data_apis import OverpassAPIQueryStrategy, iDAIGazetteerAPIQueryStrategy
 
-import requests
+import requests 
+from .tools import KgrFinderTool
 
 class KgrFinderOptionsFactory(QgsOptionsWidgetFactory):
 
@@ -180,153 +174,3 @@ class KgrFinder:
     def run(self):
         # create and show a configuration dialog or something similar
         print("TestPlugin: run called!")
-
-
-class KgrFinderTool(QgsMapTool):
-    def __init__(self, canvas):
-        QgsMapTool.__init__(self, canvas)
-        self.canvas = canvas
-        self.rubber_band = QgsRubberBand(self.canvas, QgsWkbTypes.PolygonGeometry)
-        self.rubber_band.setStrokeColor(QColor('red'))
-        self.rubber_band.setWidth(1)
-        self.is_drawing = False
-        self.api_strategies = [OverpassAPIQueryStrategy(), iDAIGazetteerAPIQueryStrategy()]  # Add any additional strategies
-        # self.api_strategies = [iDAIGazetteerAPIQueryStrategy()]  # Add any additional strategies
-
-        # self.api_strategies = [OverpassAPIQueryStrategy()]  # Add any additional strategies
-
-    def canvasPressEvent(self, event):
-        if not self.is_drawing:
-            self.is_drawing = True
-            self.start_point = self.toMapCoordinates(event.pos())
-            self.rubber_band.setToGeometry(QgsGeometry.fromRect(QgsRectangle(self.start_point, self.start_point)), None)
-            self.rubber_band.show()
-
-    def canvasMoveEvent(self, event):
-        if self.is_drawing:
-            self.end_point = self.toMapCoordinates(event.pos())
-            self.rubber_band.setToGeometry(QgsGeometry.fromRect(QgsRectangle(self.start_point, self.end_point)), None)
-            self.rubber_band.show()
-
-    def canvasReleaseEvent(self, event):
-        if self.is_drawing:
-            self.is_drawing = False
-            self.end_point = self.toMapCoordinates(event.pos())
-            self.rubber_band.setToGeometry(QgsGeometry.fromRect(QgsRectangle(self.start_point, self.end_point)), None)
-            self.rubber_band.show()
-            self.showRectangleCoordinates()
-
-
-    def showRectangleCoordinates(self):
-        rect = self.rubber_band.asGeometry().boundingBox().toRectF()
-        x_min, y_min, x_max, y_max = rect.getCoords()
-        point_layer = self.createPointLayer()
-        fields = point_layer.fields()
-
-        for strategy in self.api_strategies:
-            print(strategy)
-            data = strategy.query(x_min, y_min, x_max, y_max)
-            elements = strategy.extractElements(data)
-            attribute_mappings = strategy.getAttributeMappings()
-            
-            for element in elements:
-                feature = self.createFeature(element, fields, attribute_mappings, strategy)
-
-                if feature is not None:
-                    point_layer.dataProvider().addFeature(feature)
-
-            categorized_renderer = self.createCategorizedRenderer(point_layer)
-
-            point_layer.setRenderer(categorized_renderer)
-            point_layer.triggerRepaint()
-
-            QgsProject.instance().addMapLayer(point_layer)
-
-
-
-    def createFeature(self, element, fields, attribute_mappings, strategy):
-        lat, lon = strategy.extractLatLon(element)
-        geometry_type = strategy.getGeometryType(element)
-
-        print(lat,lon)
-        if geometry_type == 'point' and lat is not None and lon is not None:
-            point = QgsPointXY(lon, lat)
-            geometry = QgsGeometry.fromPointXY(point)
-        else:
-            # Handle other element types or missing lat/lon
-            # print(element)
-            # print("no lon lat")
-            return None
-
-        feature = QgsFeature(fields)
-        feature.setGeometry(geometry)
-
-
-        # # Iterate over attribute_mappings and set attributes
-        for attribute, mapping in attribute_mappings.items():
-            if '.' in mapping:
-                # Handle nested mappings like 'tags.name'
-                parts = mapping.split('.')
-                value = element
-                for part in parts:
-                    value = value.get(part, {})
-            else:
-                # Check if the mapping exists in the 'tags' dictionary
-                if mapping.startswith('tags.'):
-                    tag_key = mapping.split('tags.')[1]
-                    value = element['tags'].get(tag_key, '')
-                else:
-                    value = element.get(mapping, '')
-            value = str(value) if value else "-" 
-            feature.setAttribute(attribute, value)
-        
-        feature.setAttribute('source', f"{strategy.source}")
-
-        return feature
-
-
-    def createPointLayer(self):
-        fields = QgsFields()
-        fields.append(QgsField('lon', QVariant.String))
-
-        fields.append(QgsField('lat', QVariant.String))
-
-        fields.append(QgsField('name', QVariant.String))
-        fields.append(QgsField('source', QVariant.String))
-        fields.append(QgsField('description', QVariant.String, 'string', 5000))
-        fields.append(QgsField('type', QVariant.String))
-        fields.append(QgsField('id', QVariant.String))
-        fields.append(QgsField('tags', QVariant.String, 'json', 5000))
-        fields.append(QgsField('building', QVariant.String))
-
-        point_layer = QgsVectorLayer('Point?crs=EPSG:4326', 'OSM Data (Points)', 'memory')
-        point_layer.dataProvider().addAttributes(fields)
-        point_layer.updateFields()
-
-        return point_layer
-
-    def createCategorizedRenderer(self, layer):
-        categorized_renderer = QgsCategorizedSymbolRenderer('source')
-
-        osm_symbol = QgsMarkerSymbol.defaultSymbol(layer.geometryType())
-        osm_symbol.setColor(QColor(255, 0, 0))  # Blue color
-        osm_symbol.setSize(4)  # Increased size
-
-        non_osm_symbol = QgsMarkerSymbol.defaultSymbol(layer.geometryType())
-        non_osm_symbol.setColor(QColor(0, 0, 255))  # Red color
-        non_osm_symbol.setSize(4)  # Increased size
-
-        cat_osm = QgsRendererCategory('osm', osm_symbol, 'OSM Features')
-        cat_non_osm = QgsRendererCategory('DAI', non_osm_symbol, 'DAI')
-
-        categorized_renderer.addCategory(cat_osm)
-        categorized_renderer.addCategory(cat_non_osm)
-
-        return categorized_renderer
-
-
-    def deactivate(self):
-        self.rubber_band.reset()
-        self.rubber_band.hide()
-        QgsMapTool.deactivate(self)
-

@@ -16,8 +16,6 @@ import unittest
 
 from qgis.PyQt.QtGui import QDockWidget
 
-from kgr_finder_dockwidget import KgrFinderDockWidget
-
 from utilities import get_qgis_app
 
 QGIS_APP = get_qgis_app()
@@ -28,7 +26,7 @@ class KgrFinderDockWidgetTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
-        self.dockwidget = KgrFinderDockWidget(None)
+        pass
 
     def tearDown(self):
         """Runs after each test."""
