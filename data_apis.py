@@ -36,7 +36,6 @@ class APIQueryStrategy(ABC):
 
             # print("transformTo4326 vorher: ", x, y)
 
-
             project = QgsProject.instance()
             project_crs = project.crs()
             target_crs = QgsCoordinateReferenceSystem('EPSG:4326')

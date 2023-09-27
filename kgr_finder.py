@@ -34,6 +34,7 @@ from qgis.gui import QgsCollapsibleGroupBox
 from qgis.core import QgsCategorizedSymbolRenderer, QgsMarkerSymbol, QgsRendererCategory, QgsFillSymbol
 from .data_apis import OverpassAPIQueryStrategy, iDAIGazetteerAPIQueryStrategy
 from qgis.core import Qgis
+from PyQt5.QtCore import Qt
 
 
 class KgrFinderOptionsFactory(QgsOptionsWidgetFactory):
@@ -51,20 +52,19 @@ class KgrFinderOptionsFactory(QgsOptionsWidgetFactory):
 class ConfigOptionsPage(QgsOptionsPageWidget):
 
     osm_tags = [
-        "place_of_worship",
-        "Historic",
-        "Museum",
-        "memorial",
-        "Artwork",
-        "Castle",
-        "Ruins",
-        "Archaeological Site",
-        "Monastery",
-        "Cultural Centre",
-        "Library",
         "heritage",
-        "name=Universität Leipzig",
-        "name=Windmühlenstraße"
+        "archaeological_site",
+        "historic",
+        "memorial",
+        "statue",
+        "tomb",
+        "mosque",
+        "place_of_worship",
+        "museum",
+        "artwork",
+        "castle",
+        "ruins",
+        "monastery"
     ]
 
     settings_tags = [
@@ -198,7 +198,6 @@ class KgrFinder:
         # create and show a configuration dialog or something similar
         print("TestPlugin: run called!")
 
-from PyQt5.QtCore import Qt
 
 class FindKGRData(QgsMapTool):
     def __init__(self, canvas):
@@ -275,19 +274,18 @@ class FindKGRData(QgsMapTool):
             for element in elements:
                 feature = self.createFeature(element, fields, attribute_mappings, strategy)
 
-                if feature is not None:
-                    geometry_type = strategy.getGeometryType(element)
-                    if geometry_type == 'point':
-                        if feature.geometry().within(drawn_polygon):
-                            point_layer.dataProvider().addFeature(feature)
-                    elif geometry_type == 'polygon':
-                        if feature.geometry().intersects(drawn_polygon):
-                            polygon_layer.dataProvider().addFeature(feature)
+                if feature is None:
+                    continue
+
+                geometry_type = strategy.getGeometryType(element)
+                if geometry_type == 'point':
+                    if feature.geometry().within(drawn_polygon):
+                        point_layer.dataProvider().addFeature(feature)
+                elif geometry_type == 'polygon':
+                    if feature.geometry().intersects(drawn_polygon):
+                        polygon_layer.dataProvider().addFeature(feature)
 
             iface.messageBar().pushMessage("KGR", "Data from " + strategy.source + " loaded", level=Qgis.Success, duration=3)
-
-
-
 
 
     def createFeature(self, element, fields, attribute_mappings, strategy):
