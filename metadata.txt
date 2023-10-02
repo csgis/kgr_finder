@@ -5,12 +5,12 @@
 [general]
 name=KGR Finder
 qgisMinimumVersion=3.0
-description=Find cultural heritage from different sources like OSM, iDAI etc.
+description=This QGIS Plugin allows Users to currently download data from OpenStreetMap and/or iDAI.Gazetteer either by drawing a rectangle or by selecting a polygon layer.
 version=0.1
-author=cuprit gbr
+author=cuprit GbR.
 email=toni.schoenbuchner@cuprit.net
 
-about=Provide a brief description of the plugin and its purpose.
+about=Find cultural heritage from different sources like OpenStreetMap, iDAI.Gazetteer etc.
 
 tracker=http://bugs
 repository=http://repo
@@ -23,7 +23,7 @@ hasProcessingProvider=no
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=python
+tags=python,osm,iDAI.Gazetteer,heritage,cultural,
 
 homepage=http://homepage
 category=Plugins

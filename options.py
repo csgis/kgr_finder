@@ -43,7 +43,7 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
     ]
 
     initially_checked = {
-        "osm_tags" : ["heritage"],
+        "osm_tags" : ["heritage", "memorial"],
         "settings_tags" : ["iDAI abfragen", "OSM abfragen"]
     }
 
