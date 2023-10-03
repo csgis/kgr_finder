@@ -2,7 +2,7 @@ from qgis.core import QgsSettings
 from qgis.gui import (QgsCollapsibleGroupBox, QgsOptionsPageWidget,
                       QgsOptionsWidgetFactory)
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QCheckBox, QFormLayout, QVBoxLayout
+from qgis.PyQt.QtWidgets import QCheckBox, QFormLayout, QVBoxLayout, QTextEdit
 
 from .resources import *
 
@@ -58,8 +58,12 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
                 QgsSettings().setValue(f"/KgrFinder/{key}", self.initially_checked[key])
 
         self.section_checkboxes = {} 
-        self.createCheckBoxes(layout, "Settings", self.settings_tags, "settings_tags")
-        self.createCheckBoxes(layout, "OSM – Cultural Tags", self.osm_tags, "osm_tags")
+        self.text_areas = {} 
+
+        group_box_layout_settings = self.createCheckBoxes(layout, "Settings", self.settings_tags, "settings_tags")
+        group_box_layout_osm = self.createCheckBoxes(layout, "OSM – Cultural Tags", self.osm_tags, "osm_tags")
+        self.customTagsOsmTextarea(group_box_layout_osm)
+
         self.applyInitialSettings()
         self.loadAndSetCheckboxes()
 
@@ -99,10 +103,27 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
         for tag, checkbox in checkboxes:
             checkbox.setChecked(tag in kgr_tags)
 
+        return group_box_layout
+
+    def customTagsOsmTextarea(self, group_box_layout_osm):
+        textarea = QTextEdit()
+        textarea.setPlaceholderText("Enter additional OSM tags here")
+        group_box_layout_osm.addWidget(textarea)
+
+        self.text_areas["custom_osm_tags"] = textarea
+        
     def apply(self):
+        print(self.text_areas)
+        print(self.text_areas["custom_osm_tags"].toPlainText())
+        print(self.text_areas["custom_osm_tags"].toPlainText().splitlines())
         for settings_key, checkboxes in self.section_checkboxes.items():
-            kgr_tags = [tag for tag, checkbox in checkboxes if checkbox.isChecked()]
+            kgr_tags = [tag for tag, checkbox in checkboxes if isinstance(checkbox, QCheckBox) and  checkbox.isChecked()]
             QgsSettings().setValue(f"/KgrFinder/{settings_key}", kgr_tags) 
+
+
+
+        QgsSettings().setValue(f"/KgrFinder/custom_osm_tags", self.text_areas["custom_osm_tags"].toPlainText().splitlines())
+
 
     def loadAndSetCheckboxes(self):
         for settings_key, checkboxes in self.section_checkboxes.items():
@@ -110,6 +131,11 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
             for tag, checkbox in checkboxes:
                 checkbox.setChecked(tag in kgr_tags)
         
+        custom_osm_tags = QgsSettings().value(f"/KgrFinder/custom_osm_tags", [])
+        print(custom_osm_tags)
+        print('\n'.join(custom_osm_tags))
+        self.text_areas["custom_osm_tags"].setPlainText('\n'.join(custom_osm_tags))
+
     def checkboxStateChanged(self):
         for settings_key, checkboxes in self.section_checkboxes.items():
             kgr_tags = [tag for tag, checkbox in checkboxes if checkbox.isChecked()]

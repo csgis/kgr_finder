@@ -33,6 +33,7 @@ class FindKGRDataBaseTool(QgsMapTool):
         selected_settings_tags = QgsSettings().value("/KgrFinder/settings_tags", [])
         self.api_strategies = []
         self.polygons_features_must_be_within = []
+        
         if "OSM abfragen" in selected_settings_tags:
             self.api_strategies.append(OverpassAPIQueryStrategy())
         if "iDAI abfragen" in selected_settings_tags:
@@ -54,17 +55,22 @@ class FindKGRDataBaseTool(QgsMapTool):
             geometry = feature.geometry()
             self.polygons_features_must_be_within.append(feature)
             if geometry.type() == QgsWkbTypes.PolygonGeometry:
-                polygons = geometry.asMultiPolygon()[0] if geometry.wkbType() == QgsWkbTypes.MultiPolygon else [geometry.asPolygon()[0]]
+                polygons = (
+                    geometry.asMultiPolygon()[0]
+                    if geometry.wkbType() == QgsWkbTypes.MultiPolygon
+                    else [geometry.asPolygon()[0]]
+                )
                 for polygon in polygons:
                     polygon_points = [QgsPointXY(point) for point in polygon]
                     self.polygon_points.extend(polygon_points)
-
 
         for f in self.polygons_features_must_be_within:
             print(f)
 
     def processPolygonCoordinates(self):
-        outer_bounds_of_survey_polygons = QgsGeometry.fromPolygonXY([self.polygon_points])
+        outer_bounds_of_survey_polygons = QgsGeometry.fromPolygonXY(
+            [self.polygon_points]
+        )
 
         rect = outer_bounds_of_survey_polygons.boundingBox()
 
@@ -81,7 +87,7 @@ class FindKGRDataBaseTool(QgsMapTool):
             drawn_y_max,
             fields,
             polygon_layer,
-            point_layer
+            point_layer,
         )
 
         # Draw the polygon on the map canvas
@@ -123,7 +129,7 @@ class FindKGRDataBaseTool(QgsMapTool):
         drawn_y_max,
         fields,
         polygon_layer,
-        point_layer
+        point_layer,
     ):
         for strategy in self.api_strategies:
             data = strategy.query(drawn_x_min, drawn_y_min, drawn_x_max, drawn_y_max)
@@ -141,10 +147,14 @@ class FindKGRDataBaseTool(QgsMapTool):
                 geometry_type = strategy.getGeometryType(element)
 
                 for f in self.polygons_features_must_be_within:
-                    if geometry_type == "point" and f.geometry().contains(feature.geometry()):
+                    if geometry_type == "point" and f.geometry().contains(
+                        feature.geometry()
+                    ):
                         point_layer.dataProvider().addFeature(feature)
 
-                    elif geometry_type == "polygon" and feature.geometry().intersects(f.geometry()):
+                    elif geometry_type == "polygon" and feature.geometry().intersects(
+                        f.geometry()
+                    ):
                         polygon_layer.dataProvider().addFeature(feature)
 
             iface.messageBar().pushMessage(
@@ -320,7 +330,6 @@ class DrawPolygonTool(FindKGRDataBaseTool):
                 self.polygons_features_must_be_within.append(feature)
 
                 self.processPolygonCoordinates()
-
 
     def updateRubberBand(self):
         self.rubber_band.setToGeometry(

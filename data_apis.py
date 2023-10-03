@@ -106,11 +106,16 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
         x_max, y_max = self.transformTo4326(x_max, y_max)
 
         selected_cultural_tags = QgsSettings().value("/KgrFinder/osm_tags", [])
+        custom_osm_tags = QgsSettings().value("/KgrFinder/custom_osm_tags", [])
+
+        selected_tags = selected_cultural_tags + custom_osm_tags
+
         overpass_query = self.createOverpassQuery(
-            selected_cultural_tags, x_min, y_min, x_max, y_max
+            selected_tags, x_min, y_min, x_max, y_max
         )
 
         url = f"https://overpass-api.de/api/interpreter?data={overpass_query}"
+        print(url)
         request = QNetworkRequest(QUrl(url))
         reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
@@ -224,30 +229,30 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
 class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
     source = "iDAI.Gazetteer"
 
-    def query(self, x_min, y_min, x_max, y_max):
-        x_min, y_min = self.transformTo4326(x_min, y_min)
-        x_max, y_max = self.transformTo4326(x_max, y_max)
+    # def query(self, x_min, y_min, x_max, y_max):
+    #     x_min, y_min = self.transformTo4326(x_min, y_min)
+    #     x_max, y_max = self.transformTo4326(x_max, y_max)
 
-        selected_cultural_tags = QgsSettings().value("/KgrFinder/osm_tags", [])
-        overpass_query = self.createOverpassQuery(
-            selected_cultural_tags, x_min, y_min, x_max, y_max
-        )
+    #     selected_cultural_tags = QgsSettings().value("/KgrFinder/osm_tags", [])
+    #     overpass_query = self.createOverpassQuery(
+    #         selected_cultural_tags, x_min, y_min, x_max, y_max
+    #     )
 
-        url = f"https://overpass-api.de/api/interpreter?data={overpass_query}"
-        request = QNetworkRequest(QUrl(url))
-        reply = QgsNetworkAccessManager.instance().blockingGet(request)
+    #     url = f"https://overpass-api.de/api/interpreter?data={overpass_query}"
+    #     request = QNetworkRequest(QUrl(url))
+    #     reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
-        if reply.error():
-            if reply.errorString():
-                print(reply.errorString())
-        if reply.content():
-            data = str(reply.content(), "utf-8")
-            data = json.loads(data)
-            new_data = copy.deepcopy(data)
-            new_data = self.restructure_data(new_data)
-            return new_data
+    #     if reply.error():
+    #         if reply.errorString():
+    #             print(reply.errorString())
+    #     if reply.content():
+    #         data = str(reply.content(), "utf-8")
+    #         data = json.loads(data)
+    #         new_data = copy.deepcopy(data)
+    #         new_data = self.restructure_data(new_data)
+    #         return new_data
 
-        return None
+    #     return None
 
     def query(self, x_min, y_min, x_max, y_max):
         x_min, y_min = self.transformTo4326(x_min, y_min)
