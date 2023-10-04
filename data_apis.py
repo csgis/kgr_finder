@@ -1,20 +1,14 @@
-import requests
-from qgis.core import QgsSettings
-from abc import ABC, abstractmethod
-from qgis.core import (
-    QgsCoordinateTransform,
-    QgsProject,
-    QgsCoordinateReferenceSystem,
-    QgsPointXY,
-)
-from qgis.core import Qgis
-from qgis.utils import iface
-import json
 import copy
+import json
+import urllib.parse
+from abc import ABC, abstractmethod
 
-from qgis.PyQt.QtNetwork import QNetworkRequest
-from qgis.core import QgsBlockingNetworkRequest, QgsNetworkAccessManager
+from qgis.core import (Qgis, QgsCoordinateReferenceSystem,
+                       QgsCoordinateTransform, QgsNetworkAccessManager,
+                       QgsPointXY, QgsProject, QgsSettings)
 from qgis.PyQt.QtCore import QUrl
+from qgis.PyQt.QtNetwork import QNetworkRequest
+from qgis.utils import iface
 
 
 class APIQueryStrategy(ABC):
@@ -107,7 +101,6 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
 
         selected_cultural_tags = QgsSettings().value("/KgrFinder/osm_tags", [])
         custom_osm_tags = QgsSettings().value("/KgrFinder/custom_osm_tags", [])
-
         selected_tags = selected_cultural_tags + custom_osm_tags
 
         overpass_query = self.createOverpassQuery(
@@ -130,36 +123,6 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
             return new_data
 
         return None
-
-    """
-    def query(self, x_min, y_min, x_max, y_max):
-        x_min, y_min = self.transformTo4326(x_min, y_min)
-        x_max, y_max = self.transformTo4326(x_max, y_max)
-
-        selected_cultural_tags = QgsSettings().value("/KgrFinder/osm_tags", [])
-        overpass_query = self.createOverpassQuery(selected_cultural_tags, x_min, y_min, x_max, y_max)
-
-        try:
-            response = requests.get("https://overpass-api.de/api/interpreter", params={'data': overpass_query})
-            response.raise_for_status()  
-            data = response.json()
-
-            new_data = copy.deepcopy(data)
-            new_data = self.restructure_data(new_data)
-
-            return new_data
-        
-
-        except requests.exceptions.HTTPError as http_err:
-            print(f"HTTP error occurred: {http_err}")
-            iface.messageBar().pushMessage("KGR", "Error in Overpass API Communication", level=Qgis.Critical, duration=3)
-
-        except Exception as err:
-            iface.messageBar().pushMessage("KGR", "Error in Overpass API Communication", level=Qgis.Critical, duration=3)
-            print(f"An error occurred: {err}")
-
-        return None  # Return None in case of an error
-    """
 
     def createOverpassQuery(self, tags, x_min, y_min, x_max, y_max):
         overpass_query = "[out:json];("
@@ -185,7 +148,8 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
             "type": "type",
             "id": "id",
             "tags": "tags",
-            "building": "tags.building",
+            "lat": "lat",
+            "lon": "lon"
         }
 
     def extractElements(self, data):
@@ -229,37 +193,43 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
 class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
     source = "iDAI.Gazetteer"
 
-    # def query(self, x_min, y_min, x_max, y_max):
-    #     x_min, y_min = self.transformTo4326(x_min, y_min)
-    #     x_max, y_max = self.transformTo4326(x_max, y_max)
-
-    #     selected_cultural_tags = QgsSettings().value("/KgrFinder/osm_tags", [])
-    #     overpass_query = self.createOverpassQuery(
-    #         selected_cultural_tags, x_min, y_min, x_max, y_max
-    #     )
-
-    #     url = f"https://overpass-api.de/api/interpreter?data={overpass_query}"
-    #     request = QNetworkRequest(QUrl(url))
-    #     reply = QgsNetworkAccessManager.instance().blockingGet(request)
-
-    #     if reply.error():
-    #         if reply.errorString():
-    #             print(reply.errorString())
-    #     if reply.content():
-    #         data = str(reply.content(), "utf-8")
-    #         data = json.loads(data)
-    #         new_data = copy.deepcopy(data)
-    #         new_data = self.restructure_data(new_data)
-    #         return new_data
-
-    #     return None
-
     def query(self, x_min, y_min, x_max, y_max):
         x_min, y_min = self.transformTo4326(x_min, y_min)
         x_max, y_max = self.transformTo4326(x_max, y_max)
 
-        url = f"https://gazetteer.dainst.org/search.json?q=%7B%22bool%22%3A%7B%22must%22%3A%5B%7B%22match%22%3A%7B%22types%22%3A%22archaeological-site%22%7D%7D%5D%7D%7D&fq=_exists_:prefLocation.coordinates%20OR%20_exists_:prefLocation.shape&polygonFilterCoordinates={x_min}&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}&polygonFilterCoordinates={y_max}&polygonFilterCoordinates={x_min}&polygonFilterCoordinates={y_max}&limit=1000&type=extended&pretty=true"
+        idai_gazetteer_filter = QgsSettings().value("/KgrFinder/idai_gazetteer_filter", "None")
+        custom_gazetteer_tags = QgsSettings().value("/KgrFinder/custom_gazetteer_tags", [])
+        print(custom_gazetteer_tags)
+
+        BASE_URL = "https://gazetteer.dainst.org/search.json?q="
+
+        options = ""
+
+        # Build idai_gazetteer_filter_str
+        idai_gazetteer_filter_str = '{"match":{"types":"'+idai_gazetteer_filter+'"}}' if idai_gazetteer_filter != "None" else ""
+
+        # Build idai_gazetteer_custom_tags_str
+        idai_gazetteer_custom_tags_str = ', '.join(['{"match":{"tags":"'+tag+'"}}' for tag in custom_gazetteer_tags])
+
+        # Combine filter and custom tags if both are present
+        if idai_gazetteer_filter_str and idai_gazetteer_custom_tags_str:
+            idai_gazetteer_filter_str += ','
+
+        # Construct the options JSON string
+        options = '{"bool":{"must":['+idai_gazetteer_filter_str+idai_gazetteer_custom_tags_str+']}}'
+
+        
+        url = BASE_URL + options
+        url += "&fq=_exists_:prefLocation.coordinates OR _exists_:prefLocation.shape"
+        url += "&polygonFilterCoordinates="
+        url += f'{x_min}&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}+'
+        url += f'&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}&polygonFilterCoordinates={y_max}'
+        url += f'&polygonFilterCoordinates={x_min}&polygonFilterCoordinates={y_max}'
+        url += "&limit=1000&type=extended&pretty=true"
+
         request = QNetworkRequest(QUrl(url))
+        print(url)
+        
         reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
         if reply.error():
@@ -300,13 +270,13 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
 
     def getAttributeMappings(self):
         return {
-            "source": "dai",
-            # 'name': 'tags.name',
-            # 'description': 'tags.description',
-            # 'type': 'type',
+            'name': 'prefName.title',
+            # 'description': 'types',
+            'type': 'types',
             "id": "@id",
             # 'tags': 'tags',
-            # 'building': 'tags.building'
+            "lat": "prefLocation.coordinates[1]",
+            "lon": "prefLocation.coordinates[0]",
         }
 
     def extractElements(self, data):

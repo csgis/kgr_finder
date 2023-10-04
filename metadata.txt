@@ -27,7 +27,7 @@ tags=python,osm,iDAI.Gazetteer,heritage,cultural,
 
 homepage=http://homepage
 category=Plugins
-icon=greif.png
+icon=assets/greif.png
 # experimental flag
 experimental=True
 

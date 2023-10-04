@@ -1,20 +1,9 @@
 from PyQt5.QtCore import Qt
-from qgis.core import (
-    Qgis,
-    QgsCategorizedSymbolRenderer,
-    QgsFeature,
-    QgsField,
-    QgsFields,
-    QgsFillSymbol,
-    QgsGeometry,
-    QgsMarkerSymbol,
-    QgsPointXY,
-    QgsProject,
-    QgsRendererCategory,
-    QgsSettings,
-    QgsVectorLayer,
-    QgsWkbTypes,
-)
+from qgis.core import (Qgis, QgsCategorizedSymbolRenderer, QgsFeature,
+                       QgsField, QgsFields, QgsFillSymbol, QgsGeometry,
+                       QgsMarkerSymbol, QgsPointXY, QgsProject,
+                       QgsRendererCategory, QgsSettings, QgsVectorLayer,
+                       QgsWkbTypes)
 from qgis.gui import QgsMapTool, QgsRubberBand
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
@@ -33,11 +22,13 @@ class FindKGRDataBaseTool(QgsMapTool):
         selected_settings_tags = QgsSettings().value("/KgrFinder/settings_tags", [])
         self.api_strategies = []
         self.polygons_features_must_be_within = []
-        
+
         if "OSM abfragen" in selected_settings_tags:
             self.api_strategies.append(OverpassAPIQueryStrategy())
         if "iDAI abfragen" in selected_settings_tags:
             self.api_strategies.append(iDAIGazetteerAPIQueryStrategy())
+
+        print( self.api_strategies )
 
     # Example method to add a feature to self.polygons_features_must_be_within
     def addFeature(self, feature):
@@ -185,16 +176,20 @@ class FindKGRDataBaseTool(QgsMapTool):
         feature = QgsFeature(fields)
         feature.setGeometry(geometry)
 
-        # # Iterate over attribute_mappings and set attributes
+        # Iterate over attribute_mappings and set attributes
         for attribute, mapping in attribute_mappings.items():
             if "." in mapping:
-                # Handle nested mappings like 'tags.name'
                 parts = mapping.split(".")
                 value = element
                 for part in parts:
-                    value = value.get(part, {})
+                    if "[" in part and "]" in part:
+                        # Handle indexed mappings
+                        base_part, index = part.split("[")
+                        index = int(index.rstrip("]"))
+                        value = value.get(base_part, [])[index]
+                    else:
+                        value = value.get(part, {})
             else:
-                # Check if the mapping exists in the 'tags' dictionary
                 if mapping.startswith("tags."):
                     tag_key = mapping.split("tags.")[1]
                     value = element["tags"].get(tag_key, "")
@@ -213,11 +208,10 @@ class FindKGRDataBaseTool(QgsMapTool):
         fields.append(QgsField("lat", QVariant.String))
         fields.append(QgsField("name", QVariant.String))
         fields.append(QgsField("source", QVariant.String))
-        fields.append(QgsField("description", QVariant.String, "string", 5000))
+        fields.append(QgsField("description", QVariant.String, "string", 9000))
         fields.append(QgsField("type", QVariant.String))
         fields.append(QgsField("id", QVariant.String))
-        fields.append(QgsField("tags", QVariant.String, "json", 5000))
-        fields.append(QgsField("building", QVariant.String))
+        fields.append(QgsField("tags", QVariant.String, "json", 9000))
 
         return fields
 

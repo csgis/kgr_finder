@@ -20,13 +20,12 @@
 """
 from qgis.core import QgsProject, QgsSettings
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QDialog
+from qgis.PyQt.QtWidgets import QAction, QDialog
 from qgis.utils import iface
 
 from .options import ConfigOptionsPage, KgrFinderOptionsFactory
 from .resources import *
-from .tools import FindKGRDataBaseTool, PolygonLayerDialog, DrawPolygonTool
-from qgis.PyQt.QtWidgets import QAction
+from .tools import DrawPolygonTool, FindKGRDataBaseTool, PolygonLayerDialog
 
 
 class KgrFinder:
@@ -35,16 +34,15 @@ class KgrFinder:
     def __init__(self, iface):
         self.iface = iface
         self.tool = None
+        self.toolbar = self.iface.addToolBar("KGRFinder")
 
     def initGui(self):
         # need to initally set options
         ConfigOptionsPage(None)
 
-        self.toolbar = self.iface.addToolBar("KGRFinder")
-
         if not hasattr(self, "find_data_by_drawn_polygon"):
             self.find_data_by_drawn_polygon = QAction(
-                QIcon(":/plugins/kgr_finder/greif_polygon.png"),
+                QIcon(":/plugins/kgr_finder/assets/greif_polygon.png"),
                 "Find data by drawing a polygon",
                 self.iface.mainWindow(),
             )
@@ -60,7 +58,7 @@ class KgrFinder:
 
         if not hasattr(self, "find_data_by_layer_tool"):
             self.find_data_by_layer_tool = QAction(
-                QIcon(":/plugins/kgr_finder/greif_rectangle.png"),
+                QIcon(":/plugins/kgr_finder/assets/greif_rectangle.png"),
                 "Find data by polygon layer bounds",
                 self.iface.mainWindow(),
             )
@@ -117,9 +115,15 @@ class KgrFinder:
 
         self.iface.removeToolBarIcon(self.find_data_by_drawn_polygon)
         iface.unregisterOptionsWidgetFactory(self.options_factory)
-            
-        QgsSettings().remove("/KgrFinder/settings_tags")
-        QgsSettings().remove("/KgrFinder/osm_tags")
+
+        settings = QgsSettings()
+        keys = settings.allKeys()
+        for key in keys:
+            value = settings.value(key)
+            if "KgrFinder" in key:
+                print(f"{key}: {value}")
+                QgsSettings().remove(f"/{key}")
+        
 
         self.iface.mapCanvas().unsetMapTool(self.tool)
         self.tool = None

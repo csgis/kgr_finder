@@ -1,5 +1,0 @@
-<RCC>
-    <qresource prefix="/plugins/plugin_learning" >
-        <file>icon.png</file>
-    </qresource>
-</RCC>

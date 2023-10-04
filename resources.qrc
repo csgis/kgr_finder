@@ -1,12 +1,11 @@
 <RCC>
     <qresource prefix="/plugins/kgr_finder" >
-        <file>greif.png</file>
+        <file>assets/greif.png</file>
     </qresource>
     <qresource prefix="/plugins/kgr_finder" >
-        <file>greif_rectangle.png</file>
+        <file>assets/greif_rectangle.png</file>
     </qresource>
     <qresource prefix="/plugins/kgr_finder" >
-        <file>greif_polygon.png</file>
+        <file>assets/greif_polygon.png</file>
     </qresource>
-    
 </RCC>
