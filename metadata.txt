@@ -12,8 +12,8 @@ email=toni.schoenbuchner@cuprit.net
 
 about=Find cultural heritage from different sources like OpenStreetMap, iDAI.Gazetteer etc.
 
-tracker=http://bugs
-repository=http://repo
+tracker=https://github.com/cuprit-gbr/KGRFinder-docs/issues
+repository=https://github.com/cuprit-gbr/KGRFinder-docs
 # End of mandatory metadata
 
 # Recommended items:
@@ -25,7 +25,7 @@ hasProcessingProvider=no
 # Tags are comma separated with spaces allowed
 tags=python,osm,iDAI.Gazetteer,heritage,cultural,
 
-homepage=http://homepage
+homepage=https://kgr-finder-docs.cuprit.net/
 category=Plugins
 icon=assets/greif.png
 # experimental flag
