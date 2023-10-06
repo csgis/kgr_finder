@@ -7,12 +7,14 @@ from qgis.core import (Qgis, QgsCategorizedSymbolRenderer, QgsFeature,
 from qgis.gui import QgsMapTool, QgsRubberBand
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
-from qgis.PyQt.QtWidgets import QComboBox, QDialog, QFormLayout, QPushButton
+from qgis.PyQt.QtWidgets import QComboBox, QDialog, QFormLayout, QPushButton, QMessageBox
 from qgis.utils import iface
 
 from .data_apis import OverpassAPIQueryStrategy, iDAIGazetteerAPIQueryStrategy
 from .resources import *
+from .utils.logger import Logger
 
+Log = Logger()
 
 class FindKGRDataBaseTool(QgsMapTool):
     def __init__(self, canvas):
@@ -27,10 +29,28 @@ class FindKGRDataBaseTool(QgsMapTool):
             self.api_strategies.append(OverpassAPIQueryStrategy())
         if "iDAI abfragen" in selected_settings_tags:
             self.api_strategies.append(iDAIGazetteerAPIQueryStrategy())
+        Log.log_debug(str(self.api_strategies))
 
-        print( self.api_strategies )
+    def checkAreaSize(self, x_min, y_min, x_max, y_max, threshold=500):
+        
+        print(f"({x_max} - {x_min}) * ({y_max} - {y_min})")
+        area = (x_max - x_min) * (y_max - y_min)
 
-    # Example method to add a feature to self.polygons_features_must_be_within
+        if area > threshold:
+            reply = QMessageBox.question(
+                iface.mainWindow(),
+                "Large Polygon Detected",
+                f"The selected area is {area:.2f} square meters, which is larger than {threshold} square meters. "
+                "This may result in a long API request. Do you want to continue?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+
+            if reply == QMessageBox.No:
+                return None
+
+        return True
+
     def addFeature(self, feature):
         self.polygons_features_must_be_within.append(feature)
 
@@ -55,9 +75,6 @@ class FindKGRDataBaseTool(QgsMapTool):
                     polygon_points = [QgsPointXY(point) for point in polygon]
                     self.polygon_points.extend(polygon_points)
 
-        for f in self.polygons_features_must_be_within:
-            print(f)
-
     def processPolygonCoordinates(self):
         outer_bounds_of_survey_polygons = QgsGeometry.fromPolygonXY(
             [self.polygon_points]
@@ -69,24 +86,17 @@ class FindKGRDataBaseTool(QgsMapTool):
         drawn_y_min = rect.yMinimum()
         drawn_x_max = rect.xMaximum()
         drawn_y_max = rect.yMaximum()
-
-        fields, point_layer, polygon_layer = self.createNewPolygonLayers()
-        self.addFeaturesByStrategy(
-            drawn_x_min,
-            drawn_y_min,
-            drawn_x_max,
-            drawn_y_max,
-            fields,
-            polygon_layer,
-            point_layer,
-        )
-
-        # Draw the polygon on the map canvas
-        # rubber_band = QgsRubberBand(self.canvas, QgsWkbTypes.PolygonGeometry)
-        # rubber_band.setToGeometry(self.selected_features, None)
-        # rubber_band.setColor(QColor(255, 0, 0))  # Set color to red
-        # rubber_band.setWidth(2)
-        # rubber_band.show()
+        if self.checkAreaSize(drawn_x_min, drawn_y_min, drawn_x_max, drawn_y_max):
+            fields, point_layer, polygon_layer = self.createNewPolygonLayers()
+            self.addFeaturesByStrategy(
+                drawn_x_min,
+                drawn_y_min,
+                drawn_x_max,
+                drawn_y_max,
+                fields,
+                polygon_layer,
+                point_layer,
+            )
 
     def createNewPolygonLayers(self):
         point_layer = self.createLayer("Point")

@@ -52,8 +52,8 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
     ]
 
     initially_checked = {
-        "osm_tags" : ["heritage"],
-        "settings_tags" : ["iDAI abfragen"],
+        "osm_tags" : ["heritage", "historic"],
+        "settings_tags" : ["iDAI abfragen","OSM abfragen"],
         "idai_gazetteer_filter" : "archaeological-site"
     }
 
@@ -174,7 +174,6 @@ class ConfigOptionsPage(QgsOptionsPageWidget):
         if not selected_tag and not any(button[1].isChecked() for button in radio_buttons):
             # If no saved setting and no radio button is checked, set the first one as checked
             for tag, radio_button in radio_buttons:
-                print(tag, "x")
                 if tag == self.initially_checked["gazetteer_filter"]:
                     radio_button.setChecked(tag == self.initially_checked["gazetteer_filter"])
         else:

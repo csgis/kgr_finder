@@ -10,6 +10,9 @@ from qgis.PyQt.QtCore import QUrl
 from qgis.PyQt.QtNetwork import QNetworkRequest
 from qgis.utils import iface
 
+from .utils.logger import Logger
+
+Log = Logger()
 
 class APIQueryStrategy(ABC):
     source = None
@@ -108,13 +111,15 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
         )
 
         url = f"https://overpass-api.de/api/interpreter?data={overpass_query}"
-        print(url)
+        Log.log_debug(f"called url {url}")
+
         request = QNetworkRequest(QUrl(url))
         reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
         if reply.error():
             if reply.errorString():
-                print(reply.errorString())
+                Log.log_error(reply.errorString())
+
         if reply.content():
             data = str(reply.content(), "utf-8")
             data = json.loads(data)
@@ -130,8 +135,6 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
         for search_term in tags:
             key, sep, value = search_term.partition("=")
             key, value = [f"'{value}'" if value else "" for value in (key, value)]
-
-            # print( key, sep, value )
 
             query = f"node[{key}{sep}{value}]({y_min},{x_min},{y_max},{x_max});"
             query += f"way[{key}{sep}{value}]({y_min},{x_min},{y_max},{x_max});>;"
@@ -199,7 +202,7 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
 
         idai_gazetteer_filter = QgsSettings().value("/KgrFinder/idai_gazetteer_filter", "None")
         custom_gazetteer_tags = QgsSettings().value("/KgrFinder/custom_gazetteer_tags", [])
-        print(custom_gazetteer_tags)
+        Log.log_debug(custom_gazetteer_tags)
 
         BASE_URL = "https://gazetteer.dainst.org/search.json?q="
 
@@ -228,13 +231,14 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
         url += "&limit=1000&type=extended&pretty=true"
 
         request = QNetworkRequest(QUrl(url))
-        print(url)
+        Log.log_debug(url)
         
         reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
         if reply.error():
             if reply.errorString():
-                print(reply.errorString())
+                Log.error(reply.errorString())
+
                 iface.messageBar().pushMessage(
                     "KGR", reply.errorString(), level=Qgis.Critical, duration=3
                 )
@@ -246,27 +250,6 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
             return new_data
 
         return None
-
-        """
-        try:
-            # Construct the query URL
-            gazeteer_url = f"https://gazetteer.dainst.org/search.json?q=%7B%22bool%22%3A%7B%22must%22%3A%5B%7B%22match%22%3A%7B%22types%22%3A%22archaeological-site%22%7D%7D%5D%7D%7D&fq=_exists_:prefLocation.coordinates%20OR%20_exists_:prefLocation.shape&polygonFilterCoordinates={x_min}&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}&polygonFilterCoordinates={y_max}&polygonFilterCoordinates={x_min}&polygonFilterCoordinates={y_max}&limit=1000&type=extended&pretty=true"
-
-            response = requests.get(gazeteer_url)
-            response.raise_for_status()  # Raise an exception for HTTP errors (4xx and 5xx)
-            data = response.json()
-            # print(json.dumps(data, indent=4))
-            return data
-        except requests.exceptions.HTTPError as http_err:
-            print(f"HTTP error occurred: {http_err}")
-            iface.messageBar().pushMessage("KGR", "Error in DAI API Communication", level=Qgis.Critical, duration=3)
-
-        except Exception as err:
-            iface.messageBar().pushMessage("KGR", "Error in DAI API Communication", level=Qgis.Critical, duration=3)
-            print(f"An error occurred: {err}")
-
-        return None  # Return None in case of an error
-        """
 
     def getAttributeMappings(self):
         return {

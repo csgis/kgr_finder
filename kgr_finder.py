@@ -27,6 +27,9 @@ from .options import ConfigOptionsPage, KgrFinderOptionsFactory
 from .resources import *
 from .tools import DrawPolygonTool, FindKGRDataBaseTool, PolygonLayerDialog
 
+from .utils.logger import Logger
+
+Log = Logger()
 
 class KgrFinder:
     """QGIS Plugin Implementation."""
@@ -121,7 +124,7 @@ class KgrFinder:
         for key in keys:
             value = settings.value(key)
             if "KgrFinder" in key:
-                print(f"{key}: {value}")
+                Log.log_debug(f"{key}: {value}")
                 QgsSettings().remove(f"/{key}")
         
 
@@ -130,4 +133,5 @@ class KgrFinder:
         del self.toolbar
 
     def run(self):
-        print("KGR Plugin: run called!")
+        Log.log_debug("run called")
+
