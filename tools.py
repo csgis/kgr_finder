@@ -33,7 +33,6 @@ class FindKGRDataBaseTool(QgsMapTool):
 
     def checkAreaSize(self, x_min, y_min, x_max, y_max, threshold=500):
         
-        print(f"({x_max} - {x_min}) * ({y_max} - {y_min})")
         area = (x_max - x_min) * (y_max - y_min)
 
         if area > threshold:
