@@ -1,13 +1,30 @@
 from PyQt5.QtCore import Qt
-from qgis.core import (Qgis, QgsCategorizedSymbolRenderer, QgsFeature,
-                       QgsField, QgsFields, QgsFillSymbol, QgsGeometry,
-                       QgsMarkerSymbol, QgsPointXY, QgsProject,
-                       QgsRendererCategory, QgsSettings, QgsVectorLayer,
-                       QgsWkbTypes)
+from qgis.core import (
+    Qgis,
+    QgsCategorizedSymbolRenderer,
+    QgsFeature,
+    QgsField,
+    QgsFields,
+    QgsFillSymbol,
+    QgsGeometry,
+    QgsMarkerSymbol,
+    QgsPointXY,
+    QgsProject,
+    QgsRendererCategory,
+    QgsSettings,
+    QgsVectorLayer,
+    QgsWkbTypes,
+)
 from qgis.gui import QgsMapTool, QgsRubberBand
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
-from qgis.PyQt.QtWidgets import QComboBox, QDialog, QFormLayout, QPushButton, QMessageBox
+from qgis.PyQt.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QPushButton,
+    QMessageBox,
+)
 from qgis.utils import iface
 
 from .data_apis import OverpassAPIQueryStrategy, iDAIGazetteerAPIQueryStrategy
@@ -15,6 +32,7 @@ from .resources import *
 from .utils.logger import Logger
 
 Log = Logger()
+
 
 class FindKGRDataBaseTool(QgsMapTool):
     def __init__(self, canvas):
@@ -32,7 +50,6 @@ class FindKGRDataBaseTool(QgsMapTool):
         Log.log_debug(str(self.api_strategies))
 
     def checkAreaSize(self, x_min, y_min, x_max, y_max, threshold=500):
-        
         area = (x_max - x_min) * (y_max - y_min)
 
         if area > threshold:
@@ -42,7 +59,7 @@ class FindKGRDataBaseTool(QgsMapTool):
                 f"The selected area is {area:.2f} square meters, which is larger than {threshold} square meters. "
                 "This may result in a long API request. Do you want to continue?",
                 QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                QMessageBox.No,
             )
 
             if reply == QMessageBox.No:

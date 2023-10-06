@@ -31,6 +31,7 @@ from .utils.logger import Logger
 
 Log = Logger()
 
+
 class KgrFinder:
     """QGIS Plugin Implementation."""
 
@@ -126,7 +127,6 @@ class KgrFinder:
             if "KgrFinder" in key:
                 Log.log_debug(f"{key}: {value}")
                 QgsSettings().remove(f"/{key}")
-        
 
         self.iface.mapCanvas().unsetMapTool(self.tool)
         self.tool = None
@@ -134,4 +134,3 @@ class KgrFinder:
 
     def run(self):
         Log.log_debug("run called")
-
