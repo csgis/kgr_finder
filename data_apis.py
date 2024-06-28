@@ -202,7 +202,7 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
 
         idai_gazetteer_filter = QgsSettings().value("/KgrFinder/idai_gazetteer_filter", "None")
         custom_gazetteer_tags = QgsSettings().value("/KgrFinder/custom_gazetteer_tags", [])
-        Log.log_debug(custom_gazetteer_tags)
+        print(custom_gazetteer_tags)
 
         BASE_URL = "https://gazetteer.dainst.org/search.json?q="
 
@@ -220,25 +220,26 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
 
         # Construct the options JSON string
         options = '{"bool":{"must":['+idai_gazetteer_filter_str+idai_gazetteer_custom_tags_str+']}}'
-
+        options = urllib.parse.quote_plus(options)
         
         url = BASE_URL + options
-        url += "&fq=_exists_:prefLocation.coordinates OR _exists_:prefLocation.shape"
-        url += "&polygonFilterCoordinates="
-        url += f'{x_min}&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}+'
-        url += f'&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}&polygonFilterCoordinates={y_max}'
-        url += f'&polygonFilterCoordinates={x_min}&polygonFilterCoordinates={y_max}'
-        url += "&limit=1000&type=extended&pretty=true"
-
+        q_string = "&fq=_exists_:prefLocation.coordinates OR _exists_:prefLocation.shape"
+        q_string += "&polygonFilterCoordinates="
+        q_string += f'{x_min}&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}+'
+        q_string += f'&polygonFilterCoordinates={y_min}&polygonFilterCoordinates={x_max}&polygonFilterCoordinates={y_max}'
+        q_string += f'&polygonFilterCoordinates={x_min}&polygonFilterCoordinates={y_max}'
+        q_string += "&limit=1000&type=extended&pretty=true"
+        url = url + q_string
+        
+        print("hello")
         request = QNetworkRequest(QUrl(url))
-        Log.log_debug(url)
+        print(url)
         
         reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
         if reply.error():
             if reply.errorString():
-                Log.error(reply.errorString())
-
+                print(reply.errorString())
                 iface.messageBar().pushMessage(
                     "KGR", reply.errorString(), level=Qgis.Critical, duration=3
                 )
