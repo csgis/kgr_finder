@@ -233,7 +233,6 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
         q_string += "&limit=1000&type=extended&pretty=true"
         url = url + q_string
         
-        print("hello")
         request = QNetworkRequest(QUrl(url))
         print(url)
         
