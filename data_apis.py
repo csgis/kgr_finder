@@ -156,6 +156,8 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
         }
 
     def extractElements(self, data):
+        if data is None:
+            return []
         # Extract elements from the Overpass API response
         return data.get("elements", [])
 
