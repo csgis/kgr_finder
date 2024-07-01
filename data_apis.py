@@ -157,7 +157,7 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
 
     def extractElements(self, data):
         if not data:
-            return None
+            return []
         # Extract elements from the Overpass API response
         return data.get("elements", [])
 
@@ -264,7 +264,7 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
 
     def extractElements(self, data):
         if not data:
-            return None
+            return []
         # Extract elements from the Overpass API response
         return data.get("result", [])
 

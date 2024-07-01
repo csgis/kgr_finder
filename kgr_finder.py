@@ -5,8 +5,8 @@
   A QGIS plugin for detecting cultura places
  -------------------
   begin                : 2023-09-11
-  copyright            : (C) 2023 by cuprit gbr
-  email                : toni.schoenbuchner@cuprit.net
+  copyright            : (C) 2023 by csgis gbr
+  email                : toni.schoenbuchner@csgis.net
  ***************************************************************************/
 
 /***************************************************************************

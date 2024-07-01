@@ -51,15 +51,31 @@ class FindKGRDataBaseTool(QgsMapTool):
             self.api_strategies.append(iDAIGazetteerAPIQueryStrategy())
         Log.log_debug(str(self.api_strategies))
 
-    def checkAreaSize(self, x_min, y_min, x_max, y_max, threshold=500):
-        area = (x_max - x_min) * (y_max - y_min)
+    def checkAreaSize(self, x_min, y_min, x_max, y_max, threshold=1000000000):
+        area_sqm = (x_max - x_min) * (y_max - y_min)
 
-        if area > threshold:
+        # Conversion factors
+        sqm_to_km2 = 1 / 1_000_000
+        sqm_to_ha = 1 / 10_000
+
+        # Convert area to km² and ha
+        area_km2 = area_sqm * sqm_to_km2
+        area_ha = area_sqm * sqm_to_ha
+
+        # Convert threshold to km² and ha
+        threshold_km2 = threshold * sqm_to_km2
+        threshold_ha = threshold * sqm_to_ha
+
+        if area_sqm > threshold:
             reply = QMessageBox.question(
                 iface.mainWindow(),
-                "Large Polygon Detected",
-                f"The selected area is {area:.2f} square meters, which is larger than {threshold} square meters. "
-                "This may result in a long API request. Do you want to continue?",
+                "WARNING: Large Polygon Detected",
+                f"WARNING: Large Polygon Detected \n\n"
+                f"The selected area is {area_km2:.2f} km², "
+                f"which exceeds the threshold of {threshold_km2:.2f} km².\n\n"
+                "Proceeding with this selection may result in a lengthy API request, potentially causing delays, "
+                "request failures, or QGIS crashing.\n\n"
+                "Do you still want to continue?",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -68,6 +84,7 @@ class FindKGRDataBaseTool(QgsMapTool):
                 return None
 
         return True
+
 
     def addFeature(self, feature):
         self.polygons_features_must_be_within.append(feature)
@@ -176,12 +193,23 @@ class FindKGRDataBaseTool(QgsMapTool):
                     ):
                         polygon_layer.dataProvider().addFeature(feature)
 
-            iface.messageBar().pushMessage(
-                "KGR",
-                "Data from " + strategy.source + " loaded",
-                level=Qgis.Success,
-                duration=3,
-            )
+            print("here")
+            print(elements)
+
+            if len(elements) == 0:
+                iface.messageBar().pushMessage(
+                    "KGR",
+                    "No Data from " + strategy.source + " received",
+                    level=Qgis.Warning,
+                    duration=3,
+                )
+            else:
+                iface.messageBar().pushMessage(
+                    "KGR",
+                    "Data from " + strategy.source + " loaded",
+                    level=Qgis.Success,
+                    duration=3,
+                )
 
     def createFeature(self, element, fields, attribute_mappings, strategy):
         geometry_type = strategy.getGeometryType(element)
