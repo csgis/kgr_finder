@@ -149,7 +149,7 @@ class KgrFinder:
 
         # add toolbar button and menu item
         self.iface.addToolBarIcon(self.action)
-        self.iface.addPluginToMenu("&Test plugins", self.action)
+        # self.iface.addPluginToMenu("&Test plugins", self.action)
 
         self.options_factory = KgrFinderOptionsFactory()
         self.options_factory.setTitle('OSM Finder')
@@ -158,7 +158,7 @@ class KgrFinder:
 
     def unload(self):
         # remove the plugin menu item and icon
-        self.iface.removePluginMenu("&Test plugins", self.action)
+        # self.iface.removePluginMenu("&Test plugins", self.action)
         self.iface.removeToolBarIcon(self.action)
         iface.unregisterOptionsWidgetFactory(self.options_factory)
 
@@ -173,4 +173,4 @@ class KgrFinder:
 
     def run(self):
         # create and show a configuration dialog or something similar
-        print("TestPlugin: run called!")
+        print("KGR Plugin: run called!")

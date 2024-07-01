@@ -156,8 +156,6 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
         }
 
     def extractElements(self, data):
-        if data is None:
-            return []
         # Extract elements from the Overpass API response
         return data.get("elements", [])
 
@@ -204,7 +202,6 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
 
         idai_gazetteer_filter = QgsSettings().value("/KgrFinder/idai_gazetteer_filter", "None")
         custom_gazetteer_tags = QgsSettings().value("/KgrFinder/custom_gazetteer_tags", [])
-        print(custom_gazetteer_tags)
 
         BASE_URL = "https://gazetteer.dainst.org/search.json?q="
 
@@ -234,13 +231,12 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
         url = url + q_string
         
         request = QNetworkRequest(QUrl(url))
-        print(url)
         
         reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
         if reply.error():
             if reply.errorString():
-                print(reply.errorString())
+                Log.log_debug(reply.errorString())
                 iface.messageBar().pushMessage(
                     "KGR", reply.errorString(), level=Qgis.Critical, duration=3
                 )

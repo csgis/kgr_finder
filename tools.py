@@ -43,6 +43,8 @@ class FindKGRDataBaseTool(QgsMapTool):
         self.api_strategies = []
         self.polygons_features_must_be_within = []
 
+        Log.log_debug(f"settings are {selected_settings_tags}")
+
         if "OSM abfragen" in selected_settings_tags:
             self.api_strategies.append(OverpassAPIQueryStrategy())
         if "iDAI abfragen" in selected_settings_tags:
@@ -212,7 +214,11 @@ class FindKGRDataBaseTool(QgsMapTool):
                         # Handle indexed mappings
                         base_part, index = part.split("[")
                         index = int(index.rstrip("]"))
-                        value = value.get(base_part, [])[index]
+                        try:
+                            value = value.get(base_part, [])[index]
+                        except IndexError:
+                            value = value.get(part, {})
+                            pass
                     else:
                         value = value.get(part, {})
             else:
