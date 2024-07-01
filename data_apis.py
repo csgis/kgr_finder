@@ -156,6 +156,8 @@ class OverpassAPIQueryStrategy(APIQueryStrategy):
         }
 
     def extractElements(self, data):
+        if not data:
+            return None
         # Extract elements from the Overpass API response
         return data.get("elements", [])
 
@@ -231,7 +233,7 @@ class iDAIGazetteerAPIQueryStrategy(APIQueryStrategy):
         url = url + q_string
         
         request = QNetworkRequest(QUrl(url))
-        
+        Log.log_debug(f"called url {url}")
         reply = QgsNetworkAccessManager.instance().blockingGet(request)
 
         if reply.error():
