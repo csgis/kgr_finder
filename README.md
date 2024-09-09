@@ -1,3 +1,5 @@
+> moved: please visit https://github.com/dainst/kgr_finder
+
 # KGR Finder plugin for QGIS
 
 Everything you need to know:
